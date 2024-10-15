@@ -275,6 +275,7 @@ type Tree struct {
 
 	// most probably better save node.id
 	cache map[C.TSNode]*Node
+	lock  sync.Mutex
 }
 
 // Copy returns a new copy of a tree
@@ -293,13 +294,26 @@ func (t *Tree) cachedNode(ptr C.TSNode) *Node {
 		return nil
 	}
 
-	if n, ok := t.cache[ptr]; ok {
+	if n := t.getnode(ptr); n != nil {
 		return n
 	}
 
 	n := &Node{ptr, t}
-	t.cache[ptr] = n
+	t.setnode(ptr, n)
 	return n
+}
+func (t *Tree) getnode(ptr C.TSNode) (n *Node) {
+	t.lock.Lock()
+	defer t.lock.Unlock()
+	if n, ok := t.cache[ptr]; ok {
+		return n
+	}
+	return nil
+}
+func (t *Tree) setnode(ptr C.TSNode, n *Node) {
+	t.lock.Lock()
+	defer t.lock.Unlock()
+	t.cache[ptr] = n
 }
 
 // Close should be called to ensure that all the memory used by the tree is freed.
